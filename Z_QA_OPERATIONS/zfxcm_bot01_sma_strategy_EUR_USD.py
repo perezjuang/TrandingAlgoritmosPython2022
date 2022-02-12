@@ -2,7 +2,7 @@ import fxcmpy
 import time
 import datetime as dt
 from pyti.exponential_moving_average import exponential_moving_average as sma
-from dbOperations.database import Database
+
 
 token = 'a0f709f5a8bbbc816c7be3bd82ac8fc66d1f8136'
 symbol = 'EUR/USD'
@@ -22,7 +22,6 @@ numberofcandles = 2000
 
 con = fxcmpy.fxcmpy(access_token=token, log_level="error", log_file=None)
 # This function runs once at the beginning of the strategy to create price/indicator streams
-db = Database()
 
 def Prepare():
     global pricedata
@@ -66,7 +65,6 @@ def getLatestPriceData():
             if new_pricedata.index.values[len(new_pricedata.index.values) - 1] != pricedata.index.values[
                 len(pricedata.index.values) - 1]:
                 pricedata = new_pricedata
-                db.insertmany(pricedata, symbol)
                 print(str(dt.datetime.now()) + " Recived and Saved ")
                 return True
             else:
@@ -83,8 +81,6 @@ def getLatestPriceData():
     except Exception as e:
         print("\n1.An exception occurred Obtaining Prices: " + symbol + " Exception: " + str(e))
         return True
-
-
 
 
 # This function is run every time a candle closes
