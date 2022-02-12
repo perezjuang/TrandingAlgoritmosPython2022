@@ -1,18 +1,20 @@
 import fxcmpy
 import time
 import datetime as dt
-from pyti.simple_moving_average import simple_moving_average as sma
+from pyti.exponential_moving_average import exponential_moving_average as sma
+from dbOperations.database import Database
+
 token = 'a0f709f5a8bbbc816c7be3bd82ac8fc66d1f8136'
-symbol = 'EUR/USD'
+symbol = 'GBP/USD'
 # Available periods : 'm1', 'm5', 'm15', 'm30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8','D1', 'W1', or 'M1'.
 timeframe = "m15"
 
-fast_sma_periods = 10
-slow_sma_periods = 30
+fast_sma_periods = 100
+slow_sma_periods = 200
 
-amount = 3
-stop = -10
-limit = 30
+amount = 15
+stop = -15
+limit = 45
 
 # Global Variables
 pricedata = None
@@ -20,13 +22,12 @@ numberofcandles = 300
 
 con = fxcmpy.fxcmpy(access_token=token, log_level="error", log_file=None)
 # This function runs once at the beginning of the strategy to create price/indicator streams
+db = Database()
 
 def Prepare():
     global pricedata
-
     print("Requesting Initial Price Data...")
     pricedata = con.get_candles(symbol, period=timeframe, number=numberofcandles)
-    print(pricedata)
     print("Initial Price Data Received...")
 
 # Get latest close bar prices and run Update() every close of bar per timeframe parameter
@@ -56,31 +57,37 @@ def StrategyHeartBeat():
 
 def getLatestPriceData():
     global pricedata
-
-    # Normal operation will update pricedata on first attempt
-    new_pricedata = con.get_candles(symbol, period=timeframe, number=numberofcandles)
-    if new_pricedata.index.values[len(new_pricedata.index.values) - 1] != pricedata.index.values[
-        len(pricedata.index.values) - 1]:
-        pricedata = new_pricedata
+    global con
+    print(str(dt.datetime.now()) + " Obtaining new prices Data ")
+    try:
+        if con.connection_status == "established":
+            # Normal operation will update pricedata on first attempt
+            new_pricedata = con.get_candles(symbol, period=timeframe, number=numberofcandles)
+            if new_pricedata.index.values[len(new_pricedata.index.values) - 1] != pricedata.index.values[
+                len(pricedata.index.values) - 1]:
+                pricedata = new_pricedata
+                db.insertmany(pricedata, symbol)
+                print(str(dt.datetime.now()) + " Recived and Saved ")
+                return True
+            else:
+                print("\n No updated prices found, trying again in 10 seconds... \n")
+                time.sleep(10)
+                return True
+        else:
+            print("\n ******* Conexion not stablished ***** retry... in 10 minutes \n")
+            time.sleep(300)
+            con.close()
+            time.sleep(300)
+            con = fxcmpy.fxcmpy(access_token=token, log_level="error", log_file=None)
+            return True
+    except Exception as e:
+        print("\n1.An exception occurred Obtaining Prices: " + symbol + " Exception: " + str(e))
         return True
 
-    # If data is not available on first attempt, try up to 3 times to update pricedata
-    counter = 0
-    while new_pricedata.index.values[len(new_pricedata.index.values) - 1] == pricedata.index.values[
-        len(pricedata.index.values) - 1] and counter < 3:
-        print("No updated prices found, trying again in 10 seconds...")
-        counter += 1
-        time.sleep(10)
-        new_pricedata = con.get_candles(symbol, period=timeframe, number=numberofcandles)
-    if new_pricedata.index.values[len(new_pricedata.index.values) - 1] != pricedata.index.values[
-        len(pricedata.index.values) - 1]:
-        pricedata = new_pricedata
-        return True
-    else:
-        return False
+
+
 
 # This function is run every time a candle closes
-
 def Update():
     print(str(dt.datetime.now()) + " " + timeframe + " Bar Closed - Running Update Function...")
 
@@ -100,7 +107,8 @@ def Update():
             print("   Closing Sell Trade(s)...")
             exit("S")
         print("   Opening Buy Trade...")
-        enter("B")
+        if countOpenTrades("B") == 0:
+            enter("B")
 
     if crossesUnder(iFastSMA, iSlowSMA):
         print("   SELL SIGNAL!")
@@ -108,7 +116,8 @@ def Update():
             print("   Closing Buy Trade(s)...")
             exit("B")
         print("   Opening Sell Trade...")
-        enter("S")
+        if countOpenTrades("S") == 0:
+            enter("S")
     print(str(dt.datetime.now()) + " " + timeframe + " Update Function Completed.\n")
     print("\n")
 
