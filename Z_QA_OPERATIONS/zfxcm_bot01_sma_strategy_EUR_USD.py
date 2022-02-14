@@ -1,10 +1,10 @@
 import fxcmpy
 import time
 import datetime as dt
+from datetime import datetime
 from pyti.exponential_moving_average import exponential_moving_average as sma
 
-
-token = 'a0f709f5a8bbbc816c7be3bd82ac8fc66d1f8136'
+token = 'ae8784eac764199ebff92a47edca0a26a0a1c2a5'
 symbol = 'EUR/USD'
 # Available periods : 'm1', 'm5', 'm15', 'm30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8','D1', 'W1', or 'M1'.
 timeframe = "m5"
@@ -19,8 +19,39 @@ limit = 200
 # Global Variables
 pricedata = None
 numberofcandles = 2000
+con = None
 
-con = fxcmpy.fxcmpy(access_token=token, log_level="error", log_file=None)
+# Monday, Tuesday, Wednesday, Thursday, and Friday
+day_off_week_operate = list()
+day_off_week_operate.append('Monday')
+day_off_week_operate.append('Tuesday')
+day_off_week_operate.append('Wednesday')
+day_off_week_operate.append('Thursday')
+day_off_week_operate.append('Friday')
+
+
+def ReturnConection():
+    global con
+    valid_con = True
+    while valid_con:
+        try:
+            #Check if day of week Valid
+            print(datetime.today().strftime('%A'))
+            if datetime.today().strftime('%A') in day_off_week_operate:
+                con = fxcmpy.fxcmpy(access_token=token, log_level="error", log_file=None)
+                return con
+            else:
+                print("Wait to check again...")
+                valid_con = False
+                #2 Hours
+                time.sleep(3600 * 2)
+        except Exception as e:
+            print("\n1.An exception occurred Obtaining Conection: " + symbol + " Exception: " + str(e))
+            valid_con = True
+            time.sleep(120)
+con = ReturnConection()
+
+
 # This function runs once at the beginning of the strategy to create price/indicator streams
 
 def Prepare():
@@ -68,18 +99,18 @@ def getLatestPriceData():
                 print(str(dt.datetime.now()) + " Recived and Saved ")
                 return True
             else:
-                print("\n No updated prices found, trying again in 10 seconds... \n")
-                time.sleep(10)
+                print("\n No updated prices found, trying again in 1 minute... \n")
+                time.sleep(60)
                 return True
         else:
             print("\n ******* Conexion not stablished ***** retry... in 10 minutes \n")
-            time.sleep(300)
-            con.close()
-            time.sleep(300)
-            con = fxcmpy.fxcmpy(access_token=token, log_level="error", log_file=None)
+            time.sleep(600)
+            con = ReturnConection()
             return True
     except Exception as e:
-        print("\n1.An exception occurred Obtaining Prices: " + symbol + " Exception: " + str(e))
+        print("\n1.An exception occurred Obtaining Prices and Conection: " + symbol + " Exception: " + str(e))
+        time.sleep(300)
+        con = ReturnConection()
         return True
 
 
@@ -240,6 +271,7 @@ def countOpenTrades(BuySell=None):
             if BuySell is None or position['isBuy'] == isbuy:
                 counter += 1
     return counter
+
 
 Prepare()  # Initialize strategy
 StrategyHeartBeat()  # Run strategy
