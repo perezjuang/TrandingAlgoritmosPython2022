@@ -50,7 +50,6 @@ print("The return for the period is: " + str(int(profits)))
 # what happens with the positions while they're open, as well
 
 returns = 0
-
 # Gets the number of pips that the market moved during the day
 df['difference (pips)'] = (df['askclose'] - df['askclose']) * 100
 # df['p/l'] = df['difference'] * pip_cost * lot_size

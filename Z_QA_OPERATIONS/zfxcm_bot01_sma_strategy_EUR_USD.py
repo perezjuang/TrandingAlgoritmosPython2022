@@ -4,7 +4,7 @@ import datetime as dt
 from datetime import datetime
 from pyti.exponential_moving_average import exponential_moving_average as sma
 
-token = 'ae8784eac764199ebff92a47edca0a26a0a1c2a5'
+token = '6729a4134f55808b3b57d80a92d480ddbb481837'
 symbol = 'EUR/USD'
 # Available periods : 'm1', 'm5', 'm15', 'm30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8','D1', 'W1', or 'M1'.
 timeframe = "m5"
@@ -38,10 +38,12 @@ def ReturnConection():
             #Check if day of week Valid
             print(datetime.today().strftime('%A'))
             if datetime.today().strftime('%A') in day_off_week_operate:
+                print("Conecting....")
                 con = fxcmpy.fxcmpy(access_token=token, log_level="error", log_file=None)
+                print("Conected...")
                 return con
             else:
-                print("Wait to check again...")
+                print("Wait a day in calendar to check again...")
                 valid_con = False
                 #2 Hours
                 time.sleep(3600 * 2)
@@ -49,6 +51,7 @@ def ReturnConection():
             print("\n1.An exception occurred Obtaining Conection: " + symbol + " Exception: " + str(e))
             valid_con = True
             time.sleep(120)
+
 con = ReturnConection()
 
 
@@ -56,6 +59,7 @@ con = ReturnConection()
 
 def Prepare():
     global pricedata
+    global con
     print("Requesting Initial Price Data...")
     pricedata = con.get_candles(symbol, period=timeframe, number=numberofcandles)
     print("Initial Price Data Received...")
