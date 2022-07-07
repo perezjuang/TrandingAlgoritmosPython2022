@@ -1,27 +1,28 @@
 #Robot Traiding
+from ast import Return
 import sys
 import fxcmpy
 import time
 import datetime as dt
 from datetime import datetime
 from pyti.exponential_moving_average import exponential_moving_average as sma
-
+from win10toast import ToastNotifier
 
 token = 'd2bfd668f956b8e60892a2ba1eb24705ab8731ef'
 symbol = 'USD/CAD'
 # Available periods : 'm1', 'm5', 'm15', 'm30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8','D1', 'W1', or 'M1'.
 timeframe = "m5"
 
-fast_sma_periods = 100
-slow_sma_periods = 1000
+fast_sma_periods = 5
+slow_sma_periods = 80
 
 amount = 1
 stop = -10
-limit = 200
+limit = 30
 
 # Global Variables
 pricedata = None
-numberofcandles = 2000
+numberofcandles = 100
 con = None
 
 # Monday, Tuesday, Wednesday, Thursday, and Friday
@@ -35,6 +36,16 @@ day_off_week_operate.append('Friday')
 def Debug(msg = None):
   return (f"Debug {sys._getframe().f_back.f_lineno}:  {msg if msg is not None else ''}")
 
+
+def Notifier(Notificacion = "Notification", NotificationBody = ""):
+    toast = ToastNotifier()
+    toast.show_toast(
+        Notificacion,
+        "NotificationBody",
+        duration = 20,
+        icon_path = "trading.ico",
+        threaded = True,
+    )
 
 def ReturnConection():
     global con
@@ -65,7 +76,7 @@ def ReturnConection():
 def Prepare():
     global pricedata
     global con
-
+    Notifier("   Start ")
     print( Debug("Requesting Initial Price Data...") )
     con = ReturnConection()
     pricedata = con.get_candles(symbol, period=timeframe, number=numberofcandles)
@@ -74,33 +85,30 @@ def Prepare():
 # Get latest close bar prices and run Update() every close of bar per timeframe parameter
 
 def StrategyHeartBeat():
-    Update()
-    while True:
-        currenttime = dt.datetime.now()
-        if timeframe == "m1" and currenttime.second == 0 and getLatestPriceData():
+    while True:     
+        if getLatestPriceData():
             Update()
-        elif timeframe == "m5" and currenttime.second == 0 and currenttime.minute % 5 == 0 and getLatestPriceData():
-            Update()
-            time.sleep(240)
-        elif timeframe == "m15" and currenttime.second == 0 and currenttime.minute % 15 == 0 and getLatestPriceData():
-            Update()
-            time.sleep(840)
-        elif timeframe == "m30" and currenttime.second == 0 and currenttime.minute % 30 == 0 and getLatestPriceData():
-            Update()
-            time.sleep(1740)
-        elif currenttime.second == 0 and currenttime.minute == 0 and getLatestPriceData():
-            Update()
-            time.sleep(3540)
-        time.sleep(1)
+            if timeframe == "m1":
+                time.sleep(60 * 1)
+            elif timeframe == "m5":
+                time.sleep(60 * 5)
+            elif timeframe == "m15":
+                time.sleep(60 * 15)
+            elif timeframe == "m30":
+                time.sleep(60 * 30)
+            else:
+                time.sleep(60 * 60)
+
+        
 
 
 # Returns True when pricedata is properly updated
-
 def getLatestPriceData():
     global pricedata
     global con
     print( Debug(str(dt.datetime.now()) + " Obtaining new prices Data ") )
     try:
+        print( Debug( str( dt.datetime.now() ) + " " + str(con.connection_status) ) )
         if con.connection_status == "established":
             # Normal operation will update pricedata on first attempt
             new_pricedata = con.get_candles(symbol, period=timeframe, number=numberofcandles)
@@ -112,17 +120,18 @@ def getLatestPriceData():
             else:
                 print( Debug("\n No updated prices found, trying again in 1 minute... \n") )
                 time.sleep(60)
-                return True
+                return False
         else:
-            print( Debug("\n ******* Conexion not stablished ***** retry... in 10 minutes \n") )
-            time.sleep(600)
+            print( Debug("\n ******* Conexion not stablished ***** retry... in 5 minutes \n") )
+            time.sleep(60 * 5)
             con = ReturnConection()
-            return True
+            return False
     except Exception as e:
         print( Debug("\n1.An exception occurred Obtaining Prices and Conection: " + symbol + " Exception: " + str(e)) )
-        time.sleep(300)
-        con = ReturnConection()
-        return True
+        print( Debug("\n  retry... in 5 minutes \n") )
+        Notifier("  Error ", str(e) )
+        time.sleep(60 * 5)
+        return False
 
 
 # This function is run every time a candle closes
@@ -141,6 +150,7 @@ def Update():
     # TRADING LOGIC
     if crossesOver(iFastSMA, iSlowSMA):
         print( Debug("   BUY SIGNAL!") )
+        Notifier("   BUY SIGNAL!","   BUY SIGNAL!")
         if countOpenTrades("S") > 0:
             print( Debug("   Closing Sell Trade(s)...") )
             exit("S")
@@ -150,6 +160,7 @@ def Update():
 
     if crossesUnder(iFastSMA, iSlowSMA):
         print( Debug("   SELL SIGNAL!") )
+        Notifier("   SELL SIGNAL!","    SELL SIGNAL!")
         if countOpenTrades("B") > 0:
             print( Debug("   Closing Buy Trade(s)...") )
             exit("B")
