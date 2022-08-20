@@ -1,6 +1,5 @@
 import mysql.connector
-
-
+import pandas as pd 
 class Database:
     my_db = my_cursor = None
 
@@ -17,18 +16,59 @@ class Database:
     def __del__(self):
         my_db.commit()
 
-    def insertmany(self, data, symbol):
-        symbol = symbol.replace("/", "_").lower()
-        for index, row in data.iterrows():
+    def insertmany(self, data, symbol,timeframe):
+        symbol = symbol.replace("/", "_")
+
+        for index, row in data.iterrows():           
             try:
-                sql = "INSERT INTO fxhistory.m15" + symbol + "" \
-                      "(date,bidopen,bidclose,bidhigh,bidlow,askopen,askclose,askhigh,asklow,tickqty)" \
-                      "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+
+                sql = "INSERT INTO fxhistory" \
+                      "(date,timeframe,symbol,bidopen,bidclose,bidhigh,bidlow,askopen,askclose,askhigh,asklow,tickqty) " \
+                      "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
                 val = (
-                index, row.bidopen, row.bidclose, row.bidhigh, row.bidlow, row.askopen, row.askclose, row.askhigh,
-                row.asklow, row.tickqty)
+                index,
+                timeframe,
+                symbol, 
+                row.bidopen,
+                row.bidclose,
+                row.bidhigh,
+                row.bidlow,
+                row.askopen,
+                row.askclose, 
+                row.askhigh,
+                row.asklow, 
+                row.tickqty
+                )
                 my_cursor.execute(sql, val)
-            except Exception as e:
-                print(e)
-        my_db.commit()
+            except Exception as e:                
+                if "Duplicate entry" in str(e):
+                    sql = "UPDATE fxhistory SET " \
+                        "bidopen = " + str(row.bidopen) + ", " \
+                        "bidclose = " + str(row.bidclose) + ", " \
+                        "bidhigh = " + str(row.bidhigh) + ", " \
+                        "bidlow = " + str(row.bidlow) + ", " \
+                        "askopen = " + str(row.askopen) + ", " \
+                        "askclose = " + str(row.askclose) + ", " \
+                        "askhigh = " + str(row.askhigh) + ", " \
+                        "asklow = " + str(row.asklow) + ", " \
+                        "tickqty = " + str(row.tickqty) + " " \
+                        "WHERE date = '" + str(index) + "' "
+                    my_cursor.execute(sql)
+                else:
+                    print(e)
+
+            finally:
+                my_db.commit()
+                #print(my_cursor.rowcount, "record(s) affected")
+                
         return True
+    
+    def getData(self, timeframe):
+        try:
+            sql_select_Query = "SELECT * FROM fxhistory.fxhistory where timeframe = '" + timeframe + "'"
+            return pd.read_sql(sql_select_Query,my_db)
+        except mysql.connector.Error as e:
+            print("Error reading data from MySQL table", e)
+        finally:
+                my_db.commit()
+        

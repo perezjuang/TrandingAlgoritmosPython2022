@@ -1,1 +1,0 @@
-# TrandingAlgoritmosPython2022
