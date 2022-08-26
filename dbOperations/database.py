@@ -1,20 +1,12 @@
-import mysql.connector
+from sqlalchemy import create_engine
+
 import pandas as pd 
 class Database:
-    my_db = my_cursor = None
+    engine  = None
 
     def __init__(self):
-        global my_db, my_cursor
-        my_db = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="123456789",
-            database="fxhistory"
-        )
-        my_cursor = my_db.cursor()
-
-    def __del__(self):
-        my_db.commit()
+        global engine 
+        engine  = create_engine("mysql+mysqldb://root:123456789@localhost/fxhistory")
 
     def insertmany(self, data, symbol,timeframe):
         symbol = symbol.replace("/", "_")
@@ -24,22 +16,25 @@ class Database:
 
                 sql = "INSERT INTO fxhistory" \
                       "(date,timeframe,symbol,bidopen,bidclose,bidhigh,bidlow,askopen,askclose,askhigh,asklow,tickqty) " \
-                      "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
-                val = (
-                index,
-                timeframe,
-                symbol, 
-                row.bidopen,
-                row.bidclose,
-                row.bidhigh,
-                row.bidlow,
-                row.askopen,
-                row.askclose, 
-                row.askhigh,
-                row.asklow, 
-                row.tickqty
+                      "VALUES ('" + str(index) + "','" + str(timeframe) + "'," \
+                      "'" + str(symbol) + "',"  \
+                      "'" + str(row.bidopen) + "'," \
+                      "'" + str(row.bidclose) + "'," \
+                      "'" + str(row.bidhigh) + "'," \
+                      "'" + str(row.bidlow) + "',"\
+                      "'" + str(row.askopen) + "'," \
+                      "'" + str(row.askclose) + "'," \
+                      "'" + str(row.askhigh) + "'," \
+                      "'" + str(row.asklow) + "'," \
+                      "'" + str(row.tickqty) + "')"
+
+                from sqlalchemy import text
+
+
+                result = engine.execute(
+                    text(sql)
                 )
-                my_cursor.execute(sql, val)
+
             except Exception as e:                
                 if "Duplicate entry" in str(e):
                     sql = "UPDATE fxhistory SET " \
@@ -53,22 +48,21 @@ class Database:
                         "asklow = " + str(row.asklow) + ", " \
                         "tickqty = " + str(row.tickqty) + " " \
                         "WHERE date = '" + str(index) + "' "
-                    my_cursor.execute(sql)
+                    result = engine.execute(
+                    text(sql) )
                 else:
                     print(e)
-
-            finally:
-                my_db.commit()
-                #print(my_cursor.rowcount, "record(s) affected")
-                
         return True
     
-    def getData(self, timeframe):
-        try:
-            sql_select_Query = "SELECT * FROM fxhistory.fxhistory where timeframe = '" + timeframe + "'"
-            return pd.read_sql(sql_select_Query,my_db)
-        except mysql.connector.Error as e:
-            print("Error reading data from MySQL table", e)
-        finally:
-                my_db.commit()
+    def getData(self, timeframe, limit=1000):
+        sql_select_Query = "SELECT * FROM fxhistory.fxhistory where timeframe = '" + timeframe + "' ORDER BY date desc limit " + str(limit)
+        sql_df = pd.read_sql(
+            sql_select_Query,
+            con=engine
+        )
+
+        sql_df_sort = sql_df.sort_values(by=['date'],ascending=True)
+
+        return sql_df_sort
+
         

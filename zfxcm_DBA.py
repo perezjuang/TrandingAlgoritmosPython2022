@@ -1,10 +1,12 @@
-from ast import Try
-import fxcmpy
 import time
 import datetime as dt
 from pyti.exponential_moving_average import exponential_moving_average as sma
 from dbOperations.database import Database
 import configparser
+import zfxcm_PlotterStrategy as zplt
+from threading import Thread
+import zfxcm_Global
+
 config = configparser.ConfigParser()
 config.read('RobotV5.ini')
 
@@ -18,10 +20,9 @@ pricedata = None
 numberofcandles =  int( time_frame_operations['numberofcandles'] )
 symbol = time_frame_operations['symbol']
 
-con = fxcmpy.fxcmpy(config_file='fxcm.cfg')
-# This function runs once at the beginning of the strategy to create price/indicator streams
+con = zfxcm_Global.con
+con.subscribe_market_data(symbol)
 db = Database()
-
 firststar = True
 
 # Get latest close bar prices and run Update() every close of bar per timeframe parameter
@@ -50,6 +51,8 @@ def getLatestPriceData():
     global pricedata
     global firststar
     global con
+    # This function runs once at the beginning of the strategy to create price/indicator streams
+
     print("Requesting Price Data..." +  str(dt.datetime.now()) )
     # Normal operation will update pricedata on first attempt
     try:
@@ -86,14 +89,16 @@ def getLatestPriceData():
     except Exception as e:
         print(e)
         print("Restablising")
-        try:
-            con.close()
-        except:
-            print("Exception Clossing CON")
-
-        con = fxcmpy.fxcmpy(config_file='fxcm.cfg')
-        print("Restablised")
         return False
-    
 
-StrategyHeartBeat() 
+
+
+if __name__ == "__main__":
+
+    def timer(name):
+        zplt.start()
+
+    background_thread = Thread(target=timer, args=('',))
+    background_thread.start()
+
+    StrategyHeartBeat() 
