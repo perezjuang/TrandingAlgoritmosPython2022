@@ -1,13 +1,24 @@
-import fxcmpy
+from multiprocessing.connection import wait
 import time
-import datetime as dt
-from pyti.exponential_moving_average import exponential_moving_average as sma
-from dbOperations.database import Database
+import fxcmpy
 import configparser
-import zfxcm_PlotterStrategy as zplt
-from threading import Thread
 
+
+
+global con
 config = configparser.ConfigParser()
 config.read('RobotV5.ini')
 #con = fxcmpy.fxcmpy(config_file='fxcm.cfg')
-con = fxcmpy.fxcmpy(server='demo',access_token='b429b38c119b86d2f004b89ac9ae786fd8d6f379', log_level="error", log_file=None)
+i = True
+while i:
+    print("Iniciando Con 1 ")
+    try:
+        con = fxcmpy.fxcmpy(server='demo',access_token='cfc00f60a0f97eb0d837adf1b109c11f327421e3', log_level="error", log_file="zfxcm.log")
+        i = False
+    except Exception as e:
+        print(e)        
+        i = True
+    time.sleep(5)
+
+
+

@@ -50,12 +50,15 @@ counterSell = 0
 global openpositions
 openpositions = 0
 
-class SubplotAnimation(animation.TimedAnimation):        
+class SubplotAnimation(animation.TimedAnimation):
+    
     def __init__(self):
 
         fig = plt.figure()
 
-        self.axBase = fig.add_subplot(1, 1, 1)
+        self.axBase = fig.add_subplot(3, 1, 1)
+        self.RSI = fig.add_subplot(3, 1, 2)
+        self.axLineRegresion = fig.add_subplot(3, 1, 3)
 
         self.t = np.linspace(0, 80, 400)
         self.x = np.cos(2 * np.pi * self.t / 10.)
@@ -72,12 +75,10 @@ class SubplotAnimation(animation.TimedAnimation):
         self.axBase.add_line(self.lineSMA10)
         self.axBase.add_line(self.lineSMA30)
 
-
         self.axPicsLinePriceHigh, = self.axBase.plot(
             [], [], linestyle='dotted', color='gray')
         self.axPicsLinePriceLow, = self.axBase.plot(
             [], [], linestyle='dotted', color='gray')
-
         self.axPicsLineMAX, = self.axBase.plot([], [], '.', color='green')
         self.axPicsLineMIN, = self.axBase.plot([], [], '.', color='red')
 
@@ -86,10 +87,31 @@ class SubplotAnimation(animation.TimedAnimation):
         self.axBase.add_line(self.axPicsLineMAX)
         self.axBase.add_line(self.axPicsLineMIN)
 
+        self.RSI.set_xlabel('DATE')
+        self.RSI.set_ylabel('RSI')
+        self.lineRSI_INF = Line2D([], [], color='red')
+        self.lineRSI_SUP = Line2D([], [], color='red')
+        self.lineRSI = Line2D([], [], color='orange')
+        self.RSI.add_line(self.lineRSI_INF)
+        self.RSI.add_line(self.lineRSI_SUP)
+        self.RSI.add_line(self.lineRSI)
+
+        self.axLineRegresion.set_xlabel('Date')
+        self.axLineRegresion.set_ylabel('Price')
+
+        self.lineRegMAX, = self.axLineRegresion.plot([], [], '.', color='green')
+        self.LineRegMin, = self.axLineRegresion.plot(
+            [], [], '.', color='red')
+        self.LineRegPrice, = self.axLineRegresion.plot(
+            [], [], '.', color='orange')
+        self.LinePriceProyected = Line2D([], [], color='white')
+
+        self.axLineRegresion.add_line(self.lineRegMAX)
+        self.axLineRegresion.add_line(self.LineRegMin)
+        self.axLineRegresion.add_line(self.LineRegPrice)
+        self.axLineRegresion.add_line(self.LinePriceProyected)
+
         animation.TimedAnimation.__init__(self, fig, interval=(60000 * min), blit=True)
-
-
-
 
     def _draw_frame(self, framedata):
         global counterBuy
@@ -122,6 +144,77 @@ class SubplotAnimation(animation.TimedAnimation):
 
         self.axBase.relim()
         self.axBase.autoscale_view()
+
+        # RSI
+        pricedata['RSI_INF'] = 30
+        pricedata['RSI_SUP'] = 70
+        pricedata['RSI'] = rsi(pricedata['bidclose'], 15)
+
+        self.lineRSI_INF.set_data(pricedata['date'], pricedata['RSI_INF'])
+        self.lineRSI_SUP.set_data(pricedata['date'], pricedata['RSI_SUP'])
+        self.lineRSI.set_data(pricedata['date'], pricedata['RSI'])
+
+        self.RSI.relim()
+        self.RSI.autoscale_view()
+
+
+        # ***********************************************************
+        # *  Regresion al precio de cierre las velas ================
+        # ***********************************************************
+        pricedata['x'] = np.arange(len(pricedata))
+        # ***********  Calcular la poscion Relativa X Fechas
+        max_value = max(np.array(pricedata['x'].values))
+        min_value = min(np.array(pricedata['x'].values))
+        for index, row in pricedata.iterrows():
+            value = pricedata.loc[index, 'x'] - min_value
+            NewPricePosition = ((value * 100) / max_value)
+            pricedata.loc[index, 'x'] = NewPricePosition
+
+            
+
+        # ************* Calcular la poscion Relativa Y Precio
+        for index, row in pricedata.iterrows():
+            pricedata.loc[index, 'y'] = int('{:.5f}'.format(
+                (pricedata.loc[index, 'bidclose'])).replace('.', ''))
+
+        max_value = max(np.array(pricedata['y'].values))
+        min_value = min(np.array(pricedata['y'].values))
+
+        for index, row in pricedata.iterrows():
+            value = pricedata.loc[index, 'y'] - min_value
+            NewPricePosition = ((value * 100) / max_value) * 100
+            pricedata.loc[index, 'y'] = NewPricePosition
+
+
+
+        regresionLineal_xx = np.array(pricedata['x'].values)
+        regresionLineal_yy = np.array(pricedata['y'].values)
+
+        regresionLineal_bb = regresionlineal2.estimate_b0_b1(regresionLineal_xx, regresionLineal_yy)
+        y_pred_sup = regresionLineal_bb[0] + \
+            regresionLineal_bb[1] * regresionLineal_xx
+        pricedata['y_pred'] = y_pred_sup
+
+        if pricedata.iloc[len(pricedata) - 1]['y_pred'] < \
+                pricedata.iloc[1]['y_pred'] and \
+                pricedata.iloc[len(pricedata) - 1]['y_pred'] < \
+                pricedata.iloc[1]['y_pred']:
+            lv_Tendency = "Bajista"
+        elif pricedata.iloc[len(pricedata) - 1]['y_pred'] > \
+                pricedata.iloc[1]['y_pred'] and \
+                pricedata.iloc[len(pricedata) - 1]['y_pred'] > \
+                pricedata.iloc[1]['y_pred']:
+            lv_Tendency = "Alcista"
+
+        #   self.lineRegMAX, self.LineRegMin, self.LineRegPrice,self.LinePriceProyected,     
+        #self.LineRegMin.set_data(pricedata['x'], pricedata['y_min_pred'])
+        self.LineRegPrice.set_data(pricedata['x'], pricedata['y_pred'])
+        self.LinePriceProyected.set_data(pricedata['x'], pricedata['y'])
+        
+        self.axLineRegresion.relim()
+        self.axLineRegresion.autoscale_view()
+
+
 
         currenttime = dt.datetime.now()
         print(currenttime)
@@ -158,7 +251,9 @@ class SubplotAnimation(animation.TimedAnimation):
 
 
         self._drawn_artists = [self.linePrice, self.lineSMA10, self.lineSMA30,
-                               self.axPicsLinePriceHigh, self.axPicsLinePriceLow, self.axPicsLineMAX, self.axPicsLineMIN
+                               self.lineRSI_INF, self.lineRSI_SUP, self.lineRSI,
+                               self.lineRegMAX, self.LineRegMin, self.LineRegPrice, self.LinePriceProyected,
+                               self.axPicsLinePriceHigh, self.axPicsLinePriceLow, self.axPicsLineMAX, self.axPicsLineMIN,
                                ]
 
     def new_frame_seq(self):
@@ -166,17 +261,19 @@ class SubplotAnimation(animation.TimedAnimation):
 
     def _init_draw(self):
         lines = [self.linePrice, self.lineSMA10, self.lineSMA30,
-                 self.axPicsLinePriceHigh, self.axPicsLinePriceLow, self.axPicsLineMAX, self.axPicsLineMIN
+                 self.lineRSI_INF, self.lineRSI_SUP, self.lineRSI,
+                 self.lineRegMAX, self.LineRegMin, self.LineRegPrice, self.LinePriceProyected,
+                 self.axPicsLinePriceHigh, self.axPicsLinePriceLow, self.axPicsLineMAX, self.axPicsLineMIN,
                  ]
         for l in lines:
             l.set_data([], [])
-        
 
 
 def start():
     ani = SubplotAnimation()
     # ani.save('test_sub.mp4')
     plt.show()
+
 
 if __name__ == "__main__":
     start()

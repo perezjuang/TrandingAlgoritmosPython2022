@@ -1,3 +1,4 @@
+import zfxcm_Global
 import time
 import datetime as dt
 from pyti.exponential_moving_average import exponential_moving_average as sma
@@ -5,11 +6,9 @@ from dbOperations.database import Database
 import configparser
 import zfxcm_PlotterStrategy as zplt
 from threading import Thread
-import zfxcm_Global
 
 config = configparser.ConfigParser()
 config.read('RobotV5.ini')
-
 
 # Available periods : 'm1', 'm5', 'm15', 'm30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8','D1', 'W1', or 'M1'.
 time_frame_operations = config['timeframe']
@@ -19,9 +18,7 @@ timeframe = time_frame_operations['timeframe']
 pricedata = None
 numberofcandles =  int( time_frame_operations['numberofcandles'] )
 symbol = time_frame_operations['symbol']
-
 con = zfxcm_Global.con
-con.subscribe_market_data(symbol)
 db = Database()
 firststar = True
 
@@ -43,7 +40,6 @@ def StrategyHeartBeat():
         elif currenttime.second == 0 and currenttime.minute == 0 and getLatestPriceData():
             db.insertmany(pricedata,symbol,timeframe)            
         time.sleep(1)
-
 
 # Returns True when pricedata is properly updated
 
@@ -91,8 +87,6 @@ def getLatestPriceData():
         print("Restablising")
         return False
 
-
-
 if __name__ == "__main__":
 
     def timer(name):
@@ -100,5 +94,4 @@ if __name__ == "__main__":
 
     background_thread = Thread(target=timer, args=('',))
     background_thread.start()
-
     StrategyHeartBeat() 
