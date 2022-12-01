@@ -37,8 +37,8 @@ fast_sma_periods = time_frame_operations['fast_sma_periods']
 slow_sma_periods = time_frame_operations['slow_sma_periods']
 min = 1
 amount_value = 1
-vallimit = 9
-valstop = -12
+vallimit = 5
+valstop = -3
 
 db = Database()
 plt.style.use('dark_background')
@@ -58,9 +58,9 @@ class SubplotAnimation(animation.TimedAnimation):
         self.axBase = fig.add_subplot(1, 1, 1)
 
         self.t = np.linspace(0, 80, 400)
-        self.x = np.cos(2 * np.pi * self.t / 10.)
-        self.y = np.sin(2 * np.pi * self.t / 10.)
-        self.z = 10 * self.t
+        #self.x = np.cos(2 * np.pi * self.t / 10.)
+        #self.y = np.sin(2 * np.pi * self.t / 10.)
+        #self.z = 10 * self.t
 
         self.axBase.set_xlabel('Date')
         self.axBase.set_ylabel('Price Move')
@@ -125,7 +125,7 @@ class SubplotAnimation(animation.TimedAnimation):
 
         currenttime = dt.datetime.now()
         print(currenttime)
-        print(pricedata['max'].iloc[-8:] ,pricedata['min'].iloc[-8:])
+        # print(pricedata['max'].iloc[-8:] ,pricedata['min'].iloc[-8:])
         if math.isnan(pricedata['max'].iloc[-5]) != True  \
                 or math.isnan(pricedata['max'].iloc[-6]) != True:
             print("Venta --- ")

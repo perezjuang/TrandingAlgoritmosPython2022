@@ -8,5 +8,6 @@ findpeaks==2.4.3
 
 websocket-client==1.1.0
 fxcmpy==1.2.6
+#fxcmpy==1.3.2
 python-engineio==3.9.0
 python-socketio==4.4.0

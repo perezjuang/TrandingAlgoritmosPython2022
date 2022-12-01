@@ -146,8 +146,8 @@ class SubplotAnimation(animation.TimedAnimation):
         self.axBase.autoscale_view()
 
         # RSI
-        pricedata['RSI_INF'] = 30
-        pricedata['RSI_SUP'] = 70
+        pricedata['RSI_INF'] = 40
+        pricedata['RSI_SUP'] = 60
         pricedata['RSI'] = rsi(pricedata['bidclose'], 15)
 
         self.lineRSI_INF.set_data(pricedata['date'], pricedata['RSI_INF'])
