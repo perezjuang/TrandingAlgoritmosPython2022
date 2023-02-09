@@ -1,3 +1,4 @@
+import os
 from traceback import print_list
 from webbrowser import get
 
@@ -27,7 +28,11 @@ config.read('RobotV5.ini')
 time_frame_operations = config['timeframe']
 timeframe = time_frame_operations['timeframe']
 
-symbol = time_frame_operations['symbol']
+#symbol = time_frame_operations['symbol']
+fileName = str(os.path.basename(__file__))
+fileName = fileName.replace(".py", "")
+fileName = fileName.replace("Plotter_", "")
+symbol = fileName#.replace("_", "/")
 
 numberofcandlesinview = time_frame_operations['numberofcandlesinview']
 fast_sma_periods = time_frame_operations['fast_sma_periods']
@@ -41,7 +46,7 @@ db = Database()
 plt.style.use('dark_background')
 
 def readData():
-    return pd.read_csv('EUR_USDm1.csv') 
+    return pd.read_csv(symbol + '.csv') 
 
 class SubplotAnimation(animation.TimedAnimation):        
     def __init__(self):
@@ -53,27 +58,34 @@ class SubplotAnimation(animation.TimedAnimation):
         self.t = np.linspace(0, 80, 400)
 
         self.axBase.set_xlabel('Date')
-        self.axBase.set_ylabel('Price Move')
+        self.axBase.set_ylabel('Price Move' + symbol )
         self.linePrice = Line2D([], [], color='white')
 
         self.lineSMA200 = Line2D([], [], color='green')
         self.lineSMA400 = Line2D([], [], color='red')
-
+        self.ema_res1 = Line2D([], [], color='orange')
+        self.ema_res2 = Line2D([], [], color='white')
+        self.ema_res3 = Line2D([], [], color='white')
+        
         self.axBase.add_line(self.linePrice)
         self.axBase.add_line(self.lineSMA200)
         self.axBase.add_line(self.lineSMA400)
-
+        self.axBase.add_line(self.ema_res1)
+        self.axBase.add_line(self.ema_res2)
+        self.axBase.add_line(self.ema_res3)
 
         self.VOLUM.set_xlabel('VOLUM')
         self.VOLUM.set_ylabel('Volumen')
         self.VOLUMLineVolum = Line2D([], [], color='white')
         self.VOLUMLinePromedio = Line2D([], [], color='orange')
         self.VOLUMFast = Line2D([], [], color='green')
+        self.VOLUMLimit = Line2D([], [], color='red')
 
        
         self.VOLUM.add_line(self.VOLUMLineVolum)
         self.VOLUM.add_line(self.VOLUMLinePromedio)
         self.VOLUM.add_line(self.VOLUMFast)
+        self.VOLUM.add_line(self.VOLUMLimit)
 
         self.RSI.set_xlabel('DATE')
         self.RSI.set_ylabel('RSI')
@@ -103,6 +115,9 @@ class SubplotAnimation(animation.TimedAnimation):
         self.linePrice.set_data(x, pricedata['bidclose'])
         self.lineSMA200.set_data(x, pricedata['ema'])
         self.lineSMA400.set_data(x, pricedata['ema_slow'])
+        self.ema_res1.set_data(x, pricedata['ema_res1'])
+        self.ema_res2.set_data(x, pricedata['ema_res2'])
+        self.ema_res3.set_data(x, pricedata['ema_res3'])
     
         # # Plot results
         #self.axPicsLinePriceHigh.set_data(x, pricedata['bidhigh'])
@@ -122,6 +137,7 @@ class SubplotAnimation(animation.TimedAnimation):
         self.VOLUMLineVolum.set_data(x, pricedata['tickqty'])
         self.VOLUMLinePromedio.set_data(x, pricedata['tickqtySMA'])
         self.VOLUMFast.set_data(x, pricedata['tickqtySMAFast'])
+        self.VOLUMLimit.set_data(x, pricedata['tickqtyLIMIT'])
 
         self.RSI.relim()
         self.RSI.autoscale_view()
@@ -133,10 +149,9 @@ class SubplotAnimation(animation.TimedAnimation):
         self.VOLUM.relim()
         self.VOLUM.autoscale_view()
 
-        self._drawn_artists = [self.linePrice, self.lineSMA200,self.lineSMA400,
+        self._drawn_artists = [self.linePrice, self.lineSMA200,self.lineSMA400,self.ema_res1,self.ema_res2,self.ema_res3,
                                self.lineRSI_INF, self.lineRSI_SUP, self.lineRSI,self.lineRSI_MED,
-
-                               self.VOLUMLineVolum, self.VOLUMLinePromedio,self.VOLUMFast,
+                               self.VOLUMLineVolum, self.VOLUMLinePromedio,self.VOLUMFast,self.VOLUMLimit,
                                ]
        
 
@@ -144,9 +159,9 @@ class SubplotAnimation(animation.TimedAnimation):
         return iter(range(self.t.size))
 
     def _init_draw(self):
-        lines = [self.linePrice, self.lineSMA200, self.lineSMA400,
+        lines = [self.linePrice, self.lineSMA200, self.lineSMA400,self.ema_res1,self.ema_res2,self.ema_res3,
                  self.lineRSI_INF, self.lineRSI_SUP, self.lineRSI,self.lineRSI_MED,
-                 self.VOLUMLineVolum, self.VOLUMLinePromedio,self.VOLUMFast,
+                 self.VOLUMLineVolum, self.VOLUMLinePromedio,self.VOLUMFast,self.VOLUMLimit,
                  ]
         for l in lines:
             l.set_data([], [])

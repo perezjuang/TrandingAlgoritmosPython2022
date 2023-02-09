@@ -1,26 +1,35 @@
 import datetime as dt
+import os
 import time
 import fxcmpy
 from pyti.simple_moving_average import simple_moving_average as sma
 from pyti.relative_strength_index import relative_strength_index as rsi
 from numpy import mean
+import pandas as pd
+import numpy as np
+from scipy import signal
 
 token = 'cfc00f60a0f97eb0d837adf1b109c11f327421e3'
 
-symbol = 'EUR/USD'
+fileName = str(os.path.basename(__file__))
+fileName = fileName.replace(".py", "")
+fileName = fileName.replace("Real_Time_", "")
+symbol = fileName.replace("_", "/")
+
 # Available periods : 'm1', 'm5', 'm15', 'm30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8','D1', 'W1', or 'M1'.
 timeframe = "m1"
 
-file = symbol.replace("/", "_") + timeframe + ".csv"
+file = symbol.replace("/", "_") + ".csv"
 
 amount = 1
 stop = -10
-limit = 15
+limit = 30
 
 # Global Variables
 pricedata = None
 pricedata_sup = None
-numberofcandles = 300
+numberofcandles = 200
+tickqtyLIMIT = 250
 
 
 def GetConnection():
@@ -109,112 +118,78 @@ def Update():
     print(str(dt.datetime.now()) + " " + timeframe +
           " Bar Closed - Running Update Function...")
 
+    d = {'bidclose': pricedata['bidclose'], 'tickqty': pricedata['tickqty']}
+    df = pd.DataFrame(data=d)
+
     # HMA fast and slow calculation
-    pricedata['ema'] = sma(pricedata['bidclose'], 3)
-    pricedata['ema_slow'] = sma(pricedata['bidclose'], 30)
-    pricedata['ema_res1'] = sma(pricedata['bidclose'], 50)
-    pricedata['ema_res2'] = sma(pricedata['bidclose'], 80)
-    pricedata['ema_res3'] = sma(pricedata['bidclose'], 100)
-    pricedata['tickqtySMAFast'] = sma(pricedata['tickqty'], 10)
-    pricedata['tickqtySMA'] = sma(pricedata['tickqty'], 100)
+    df['ema'] = df['bidclose'].ewm(span=5).mean()
+    df['ema_slow'] = df['bidclose'].ewm(span=10).mean()
+    df['ema_res1'] = df['bidclose'].ewm(span=15).mean()
+    df['ema_res2'] = df['bidclose'].ewm(span=20).mean()
+    df['value1'] = 1
 
-   
+    # Find local peaks
+    df['peaks_min'] = df.iloc[signal.argrelextrema(df['bidclose'].values, np.less, order=15)[0]]['value1']
+    df['peaks_max'] = df.iloc[signal.argrelextrema(df['bidclose'].values, np.greater, order=15)[0]]['value1']
 
-    
+    df['sell'] = np.where( (df['peaks_max'] == 1)
+                     & (df['ema'] > df['ema_slow'])
+                     & (df['ema_slow'] > df['ema_res1'])
+                     & (df['ema_res1'] > df['ema_res2']), True, False)
 
-    # ***********************************************************
-    # * RSI
-    # ***********************************************************
-    pricedata['RSI'] = rsi(pricedata['bidclose'], 15)
-    pricedata['RSI_uppval'] = (pricedata['RSI'] > 55) & (pricedata['RSI'] <= 100)
-    pricedata['RSI_subval'] = (pricedata['RSI'] < 45) & (pricedata['RSI'] >= 0)
+    #Close Strategy Operation Sell
+    operationActive = False
+    for index, row in df.iterrows():
+        if df.loc[index, 'sell'] == 1:
+            operationActive = True
+        if operationActive == True:
+            df.loc[index, 'sell'] = 1
+        if df.loc[index, 'ema'] < df.loc[index, 'ema_res2'] :
+            operationActive = False
 
-    pricedata['zone_upp_rsi'] = pricedata['RSI_uppval'].diff()
-    pricedata['zone_sub_rsi'] = pricedata['RSI_subval'].diff()
+    df['zone_sell'] = df['sell'].diff()
 
-    # ***********************************************************
-    # * Estrategy
-    # ***********************************************************
-
-    pricedata['sell'] = pricedata.apply(lambda x: x.ema <= x.ema_slow and x.ema <=
-                                        x.ema_res1 and x.ema <= x.ema_res2 and x.ema <= x.ema_res3, axis=1)
-    pricedata['zone_sell'] = pricedata['sell'].diff()
-
-    pricedata['buy'] = pricedata.apply(lambda x: x.ema >= x.ema_slow and x.ema >=
-                                       x.ema_res1 and x.ema >= x.ema_res2 and x.ema >= x.ema_res3, axis=1)
-    pricedata['zone_buy'] = pricedata['buy'].diff()
-
-    # TRADING LOGIC BUY OPEN OPERATIONS
-    rsiZoneUPP = ((pricedata['zone_upp_rsi'][len(pricedata) - 1] == True
-                 or pricedata['zone_upp_rsi'][len(pricedata) - 2] == True 
-                 or pricedata['zone_upp_rsi'][len(pricedata) - 3] == True ) 
-                 and pricedata['RSI_uppval'][len(pricedata) - 1] == True )
-    smaZoneUPP = (pricedata['zone_buy'][len(pricedata) - 1] and pricedata['buy'][len(pricedata) - 1])
-
-
-    mediaVolumen = pricedata['tickqtySMA'][len(pricedata) - 1]
-
-
-    print("Media Volumen:" + str(mediaVolumen))
-    print("Media Volumen Actual:" + str(pricedata['tickqty'][len(pricedata) - 1]))
-
-    pricedata['tickqtySMAFast'] = sma(pricedata['tickqty'], 10)
-    pricedata['tickqtySMA'] = sma(pricedata['tickqty'], 100)
-
-    VolumenTrend = False
-    if pricedata['tickqtySMAFast'][len(pricedata) - 1] >= pricedata['tickqtySMA'][len(pricedata) - 2]: 
-        VolumenTrend = True
-    print("	VOLUMNE TREND  " + str(VolumenTrend))
-
-
-    openBuy = False
-    if rsiZoneUPP and smaZoneUPP:
-        openBuy = False
-    if rsiZoneUPP:
-        print("	RSI ZONE UPP ")
-    if smaZoneUPP:
-        print("	SMA ZONE UPP ")
-
-
-    if openBuy and VolumenTrend:
-        print("	  BUY SIGNAL! ")
-        if countOpenTrades("B") == 0:
-            if countOpenTrades("S") > 0:
-                exit("S")
-            print("	  Opening Buy Trade...")
-            enter("B")
-
-    # TRADING LOGIC  BUY OPEN OPERATIONS
-    rsiZoneSub = ((pricedata['zone_sub_rsi'][len(pricedata) - 1] == True
-                    or pricedata['zone_sub_rsi'][len(pricedata) - 2] == True
-                    or pricedata['zone_sub_rsi'][len(pricedata) - 3] == True)
-                    and pricedata['RSI_subval'][len(pricedata) - 1] == True)
-    smaZoneSub = (pricedata['zone_sell'][len(pricedata) - 1] and pricedata['sell'][len(pricedata) - 1])
-
-
-
-
-    openSell = False
-    if rsiZoneSub and smaZoneSub:
-        openSell = True
-        
-    if rsiZoneSub:
-        print("	RSI ZONE SUB ")
-    if smaZoneSub:
-        print("	SMA ZONE SUB ")
-
-    if openSell and VolumenTrend:
+    if df['zone_sell'][len(df) - 1] == 1:
         print("	  SELL SIGNAL!")
         if countOpenTrades("S") == 0:
             if countOpenTrades("B"):
                 exit("B")
             print("	  Opening Sell Trade...")
             enter("S")
+            
+    if df['zone_sell'][len(df) - 1] == -1:
+            if countOpenTrades("B") > 0:
+                exit("B")
 
-    #datatoprint = pricedata[['RSI', 'sell', 'zone_sell', 'RSI_uppval',
+
+
+    # ***********************************************************
+    # * Estrategy  BUY
+    # ***********************************************************
+    df['buy'] = np.where( (df['peaks_min'] == 1)
+                     & (df['ema'] < df['ema_slow'])
+                     & (df['ema_slow'] < df['ema_res1'])
+                     & (df['ema_res1'] < df['ema_res2']), True, False)
+
+    df['zone_buy'] = df['buy'].diff()
+
+
+    if df['zone_buy'][len(df) - 1] == 1:
+        print("	  BUY SIGNAL! ")
+        if countOpenTrades("B") == 0:
+            if countOpenTrades("S") > 0:
+                exit("S")
+            print("	  Opening Buy Trade...")
+            enter("B")
+    
+    if df['zone_buy'][len(df) - 1] == -1:
+            if countOpenTrades("S") > 0:
+                exit("S")
+
+    # datatoprint = pricedata[['RSI', 'sell', 'zone_sell', 'RSI_uppval',
      #                        'zone_upp_rsi', 'buy', 'zone_buy', 'RSI_subval', 'zone_sub_rsi']]
-    #datatoprint.to_csv(file)
-    pricedata.to_csv(file)
+    # datatoprint.to_csv(file)
+    df.to_csv(file)
     print(str(dt.datetime.now()) + " " +
           timeframe + " Update Function Completed.\n")
 
