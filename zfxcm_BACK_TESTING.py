@@ -34,7 +34,7 @@ df['hma_fast'] = df['bidclose'].ewm(span=fast).mean()
 df['hma_slow'] = df['bidclose'].ewm(span=slow).mean()
 df['hma_big1slow'] = df['bidclose'].ewm(span=big1slow).mean()
 df['hma_big2slow'] = df['bidclose'].ewm(span=big2slow).mean()
-df['hma_big3slow'] = df['bidclose'].ewm(span=200).mean()
+df['hma_big3slow'] = df['bidclose'].ewm(span=100).mean()
 
 df['value1'] = 1
 # Find local peaks

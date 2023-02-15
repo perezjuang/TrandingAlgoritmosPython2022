@@ -124,7 +124,7 @@ def Update():
     df['ema_slow'] = df['bidclose'].ewm(span=5).mean()
     df['ema_res1'] = df['bidclose'].ewm(span=8).mean()
     df['ema_res2'] = df['bidclose'].ewm(span=12).mean()
-    df['ema_res3'] = df['bidclose'].ewm(span=200).mean()
+    df['ema_res3'] = df['bidclose'].ewm(span=100).mean()
 
     # Volumen trend
     df['tickqtyLIMIT'] = 400
@@ -163,8 +163,8 @@ def Update():
     df['zone_sell'] = df['sell'].diff()
 
     if df['peaks_min'][len(df) - 3] == 1:
-            if countOpenTrades("B") > 0:
-                exit("B")
+            if countOpenTrades("S") > 0:
+                exit("S")
 
     if df['zone_sell'][len(df) - 3] == 1:
         print("	  SELL SIGNAL!")
@@ -201,8 +201,8 @@ def Update():
     df['zone_buy'] = df['buy'].diff()
 
     if df['peaks_max'][len(df) - 3] == 1:
-            if countOpenTrades("S") > 0:
-                exit("S")
+            if countOpenTrades("B") > 0:
+                exit("B")
 
     if df['zone_buy'][len(df) - 3] == 1:
         print("	  BUY SIGNAL! ")
