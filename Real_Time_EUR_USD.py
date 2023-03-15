@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from scipy import signal
 
-token = 'cfc00f60a0f97eb0d837adf1b109c11f327421e3'
+token = 'c4a946e1a8a68558e71877bcf5b25014a3fe40d3'
 
 fileName = str(os.path.basename(__file__))
 fileName = fileName.replace(".py", "")
@@ -212,19 +212,6 @@ def Update():
             print("	  Opening Buy Trade...")
             enter("B")
     
-    print("Zone Buy 5 - " + str(df['zone_buy'][len(df) - 5]) + " Peaks Max " + str(df['peaks_max'][len(df) - 5] ) + " |tickqty " + str(df['tickqty'][len(df) - 5] )+ " |volumHight " + str(df['volumHight'][len(df) - 5] ))
-    print("Zone Buy 4 - " + str(df['zone_buy'][len(df) - 4]) + " Peaks Max " + str(df['peaks_max'][len(df) - 4] ) + " |tickqty " + str(df['tickqty'][len(df) - 4] )+ " |volumHight " + str(df['volumHight'][len(df) - 4] ))
-    print("Zone Buy 3 - " + str(df['zone_buy'][len(df) - 3]) + " Peaks Max " + str(df['peaks_max'][len(df) - 3] ) + " |tickqty " + str(df['tickqty'][len(df) - 3] )+ " |volumHight " + str(df['volumHight'][len(df) - 3] ))
-    print("Zone Buy 2 - " + str(df['zone_buy'][len(df) - 2]) + " Peaks Max " + str(df['peaks_max'][len(df) - 2] ) + " |tickqty " + str(df['tickqty'][len(df) - 2] )+ " |volumHight " + str(df['volumHight'][len(df) - 2] ))
-    print("Zone Buy 1 - " + str(df['zone_buy'][len(df) - 1]) + " Peaks Max " + str(df['peaks_max'][len(df) - 1] ) + " |tickqty " + str(df['tickqty'][len(df) - 1] )+ " |volumHight " + str(df['volumHight'][len(df) - 1] ))
-    
-    print("Zone Sell 5 - " + str(df['zone_sell'][len(df) - 5]) + " Peaks Min " + str(df['peaks_min'][len(df) - 5] ) + " |tickqty " + str(df['tickqty'][len(df) - 5] )+ " |volumHight " + str(df['volumHight'][len(df) - 5] ))
-    print("Zone Sell 4 - " + str(df['zone_sell'][len(df) - 4]) + " Peaks Min " + str(df['peaks_min'][len(df) - 4] ) + " |tickqty " + str(df['tickqty'][len(df) - 4] )+ " |volumHight " + str(df['volumHight'][len(df) - 4] ))
-    print("Zone Sell 3 - " + str(df['zone_sell'][len(df) - 3]) + " Peaks Min " + str(df['peaks_min'][len(df) - 3] ) + " |tickqty " + str(df['tickqty'][len(df) - 3] )+ " |volumHight " + str(df['volumHight'][len(df) - 3] ))
-    print("Zone Sell 2 - " + str(df['zone_sell'][len(df) - 2]) + " Peaks Min " + str(df['peaks_min'][len(df) - 2] ) + " |tickqty " + str(df['tickqty'][len(df) - 2] )+ " |volumHight " + str(df['volumHight'][len(df) - 2] ))
-    print("Zone Sell 1 - " + str(df['zone_sell'][len(df) - 1]) + " Peaks Min "  + str(df['peaks_min'][len(df) - 1] ) + " |tickqty " + str(df['tickqty'][len(df) - 1] )+ " |volumHight " + str(df['volumHight'][len(df) - 1] ))
-
-
     df.to_csv(file)
     print(str(dt.datetime.now()) + " " + timeframe + " Update Function Completed.\n")
 

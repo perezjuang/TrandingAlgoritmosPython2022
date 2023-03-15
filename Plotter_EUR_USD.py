@@ -49,13 +49,13 @@ class SubplotAnimation(animation.TimedAnimation):
 
         self.axBase.set_xlabel('Date')
         self.axBase.set_ylabel('Price Move' + symbol)
-        self.linePrice = Line2D([], [], color='white')
+        self.linePrice = Line2D([], [],color='white')
 
         self.lineSMA200 = Line2D([], [], color='green')
         self.lineSMA400 = Line2D([], [], color='red')
         self.ema_res1 = Line2D([], [], color='orange')
-        self.ema_res2 = Line2D([], [], color='white')
-        self.ema_res3 = Line2D([], [], color='white')
+        self.ema_res2 = Line2D([], [], color='red')
+        self.ema_res3 = Line2D([], [], color='green')
         self.sellOpen, = self.axBase.plot([], [], 'v', color='green')
         self.sellClose, = self.axBase.plot([], [], '.', color='green')
         self.buyOpen, = self.axBase.plot([], [], '^', color='red')
