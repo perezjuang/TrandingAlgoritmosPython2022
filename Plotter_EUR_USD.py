@@ -41,8 +41,8 @@ class SubplotAnimation(animation.TimedAnimation):
     def __init__(self):
         fig = plt.figure()
 
-        self.axBase = fig.add_subplot(1, 1, 1)
-        #self.RSI = fig.add_subplot(3, 1, 2)
+        self.axBase = fig.add_subplot(2, 1, 1)
+        self.RSI = fig.add_subplot(2, 1, 2)
         #self.VOLUM = fig.add_subplot(3, 1, 3)
 
         self.t = np.linspace(0, 80, 400)
@@ -87,23 +87,23 @@ class SubplotAnimation(animation.TimedAnimation):
         # self.VOLUM.add_line(self.VOLUMFast)
         # self.VOLUM.add_line(self.VOLUMLimit)
 
-        # self.RSI.set_xlabel('DATE')
-        # self.RSI.set_ylabel('RSI')
-        #self.lineRSI_INF = Line2D([], [], color='red')
-        #self.lineRSI_SUP = Line2D([], [], color='red')
-        #self.lineRSI_MED = Line2D([], [], color='white')
-        #self.lineRSI = Line2D([], [], color='orange')
+        self.RSI.set_xlabel('DATE')
+        self.RSI.set_ylabel('RSI')
+        self.lineRSI_INF = Line2D([], [], color='red')
+        self.lineRSI_SUP = Line2D([], [], color='red')
+        self.lineRSI_MED = Line2D([], [], color='white')
+        self.lineRSI = Line2D([], [], color='orange')
 
-        # self.RSI.add_line(self.lineRSI_INF)
-        # self.RSI.add_line(self.lineRSI_SUP)
-        # self.RSI.add_line(self.lineRSI_MED)
-        # self.RSI.add_line(self.lineRSI)
+        self.RSI.add_line(self.lineRSI_INF)
+        self.RSI.add_line(self.lineRSI_SUP)
+        self.RSI.add_line(self.lineRSI_MED)
+        self.RSI.add_line(self.lineRSI)
 
         animation.TimedAnimation.__init__(self, fig, interval=20000, blit=True)
 
     def _draw_frame(self, framedata):
         self.axBase.clear
-        # self.RSI.clear
+        self.RSI.clear
         # self.VOLUM.clear
 
         pricedata = readData()
@@ -136,22 +136,22 @@ class SubplotAnimation(animation.TimedAnimation):
         #self.axPicsLinePriceLow.set_data(x, pricedata['bidlow'])
 
         # RSI
-        #pricedata['RSI_INF'] = 30
-        #pricedata['RSI_SUP'] = 70
-        #pricedata['RSI_MED'] = 50
+        pricedata['RSI_INF'] = 30
+        pricedata['RSI_SUP'] = 70
+        pricedata['RSI_MED'] = 50
 
-        #self.lineRSI_INF.set_data(x, pricedata['RSI_INF'])
-        #self.lineRSI_SUP.set_data(x, pricedata['RSI_SUP'])
-        #self.lineRSI_MED.set_data(x, pricedata['RSI_MED'])
-        #self.lineRSI.set_data(x, pricedata['RSI'])
+        self.lineRSI_INF.set_data(x, pricedata['RSI_INF'])
+        self.lineRSI_SUP.set_data(x, pricedata['RSI_SUP'])
+        self.lineRSI_MED.set_data(x, pricedata['RSI_MED'])
+        self.lineRSI.set_data(x, pricedata['rsi'])
 
         #self.VOLUMLineVolum.set_data(x, pricedata['tickqty'])
         #self.VOLUMLinePromedio.set_data(x, pricedata['tickqtySMA'])
         #self.VOLUMFast.set_data(x, pricedata['tickqtySMAFast'])
         #self.VOLUMLimit.set_data(x, pricedata['tickqtyLIMIT'])
 
-        # self.RSI.relim()
-        # self.RSI.autoscale_view()
+        self.RSI.relim()
+        self.RSI.autoscale_view()
 
         self.axBase.relim()
         self.axBase.autoscale_view()
@@ -159,8 +159,8 @@ class SubplotAnimation(animation.TimedAnimation):
         # self.VOLUM.relim()
         # self.VOLUM.autoscale_view()
 
-        self._drawn_artists = [self.linePrice, self.lineSMA200, self.lineSMA400, self.ema_res1, self.ema_res2, self.ema_res3, self.sellOpen, self.sellClose, self.buyOpen, self.buyClose,self.peaks_min,self.peaks_max
-                               #self.lineRSI_INF, self.lineRSI_SUP, self.lineRSI,self.lineRSI_MED,
+        self._drawn_artists = [self.linePrice, self.lineSMA200, self.lineSMA400, self.ema_res1, self.ema_res2, self.ema_res3, self.sellOpen, self.sellClose, self.buyOpen, self.buyClose,self.peaks_min,self.peaks_max,
+                               self.lineRSI_INF, self.lineRSI_SUP, self.lineRSI,self.lineRSI_MED,
                                #self.VOLUMLineVolum, self.VOLUMLinePromedio,self.VOLUMFast,self.VOLUMLimit,
                                ]
 
@@ -168,8 +168,8 @@ class SubplotAnimation(animation.TimedAnimation):
         return iter(range(self.t.size))
 
     def _init_draw(self):
-        lines = [self.linePrice, self.lineSMA200, self.lineSMA400, self.ema_res1, self.ema_res2, self.ema_res3, self.sellOpen, self.sellClose, self.buyOpen, self.buyClose,self.peaks_min,self.peaks_max
-                 #self.lineRSI_INF, self.lineRSI_SUP, self.lineRSI,self.lineRSI_MED,
+        lines = [self.linePrice, self.lineSMA200, self.lineSMA400, self.ema_res1, self.ema_res2, self.ema_res3, self.sellOpen, self.sellClose, self.buyOpen, self.buyClose,self.peaks_min,self.peaks_max,
+                 self.lineRSI_INF, self.lineRSI_SUP, self.lineRSI,self.lineRSI_MED,
                  #self.VOLUMLineVolum, self.VOLUMLinePromedio,self.VOLUMFast,self.VOLUMLimit,
                  ]
         for l in lines:

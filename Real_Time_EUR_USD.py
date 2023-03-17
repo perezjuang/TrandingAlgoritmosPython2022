@@ -125,9 +125,10 @@ def Update():
     df['ema_res1'] = df['bidclose'].ewm(span=8).mean()
     df['ema_res2'] = df['bidclose'].ewm(span=12).mean()
     df['ema_res3'] = df['bidclose'].ewm(span=100).mean()
+    df['rsi'] = rsi(df['bidclose'],10)
 
     # Volumen trend
-    df['tickqtyLIMIT'] = 400
+    df['tickqtyLIMIT'] = 10
     df['volumHight'] = np.where( (df['tickqty'] > df['tickqtyLIMIT'] ) , 1, 0)
 
 
@@ -166,7 +167,7 @@ def Update():
             if countOpenTrades("S") > 0:
                 exit("S")
 
-    if df['zone_sell'][len(df) - 3] == 1:
+    if df['zone_sell'][len(df) - 3] == 1 and df['rsi'][len(df) - 1] < 50  :
         print("	  SELL SIGNAL!")
         if countOpenTrades("S") == 0:
             if countOpenTrades("B"):
@@ -204,7 +205,7 @@ def Update():
             if countOpenTrades("B") > 0:
                 exit("B")
 
-    if df['zone_buy'][len(df) - 3] == 1:
+    if df['zone_buy'][len(df) - 3] == 1 and df['rsi'][len(df) - 1] > 50:
         print("	  BUY SIGNAL! ")
         if countOpenTrades("B") == 0:
             if countOpenTrades("S") > 0:
