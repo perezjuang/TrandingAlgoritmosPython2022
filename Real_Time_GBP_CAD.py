@@ -21,7 +21,7 @@ timeframe = "m1"
 
 file = symbol.replace("/", "_") + ".csv"
 
-amount = 2
+amount = 1
 stop = -5
 limit = 15
 
@@ -143,7 +143,7 @@ def Update():
                      & (df['ema_res1'] > df['ema_res2'])
                      #& (df['ema_res2'] > df['ema_res3'])
                      & (df['ema'] < df['ema_res3']) 
-                     #& (df['volumHight'] == 1)
+                     & (df['volumHight'] == 1)
                      , 1, 0)
 
 
@@ -161,11 +161,11 @@ def Update():
 
     df['zone_sell'] = df['sell'].diff()
 
-    #if df['peaks_min'][len(df) - 4] == 1:
-    #        if countOpenTrades("S") > 0:
-    #            exit("S")
+    if df['peaks_min'][len(df) - 1] == 1:
+            if countOpenTrades("S") > 0:
+                exit("S")
 
-    if df['zone_sell'][len(df) - 4] == 1 and df['rsi'][len(df) - 1] < 50  :
+    if df['zone_sell'][len(df) - 3] == 1 and df['rsi'][len(df) - 1] < 60  :
         print("	  SELL SIGNAL!")
         if countOpenTrades("S") == 0:
             if countOpenTrades("B"):
@@ -184,7 +184,7 @@ def Update():
                      & (df['ema_res1'] < df['ema_res2'])
                      #& (df['ema_res2'] < df['ema_res3'])
                      & (df['ema'] > df['ema_res3'])
-                     #& (df['volumHight'] == 1)
+                     & (df['volumHight'] == 1)
                      , 1, 0)
 
     #Close Strategy Operation Sell
@@ -199,11 +199,11 @@ def Update():
 
     df['zone_buy'] = df['buy'].diff()
 
-    #if df['peaks_max'][len(df) - 4] == 1:
-    #        if countOpenTrades("B") > 0:
-    #            exit("B")
+    if df['peaks_max'][len(df) - 1] == 1:
+            if countOpenTrades("B") > 0:
+                exit("B")
 
-    if df['zone_buy'][len(df) - 4] == 1 and df['rsi'][len(df) - 1] > 50:
+    if df['zone_buy'][len(df) - 3] == 1 and df['rsi'][len(df) - 1] > 40:
         print("	  BUY SIGNAL! ")
         if countOpenTrades("B") == 0:
             if countOpenTrades("S") > 0:
