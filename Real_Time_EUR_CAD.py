@@ -141,9 +141,9 @@ def Update():
                      & (df['ema'] > df['ema_slow'])
                      & (df['ema_slow'] > df['ema_res1'])
                      & (df['ema_res1'] > df['ema_res2'])
-                     #& (df['ema_res2'] > df['ema_res3'])
+                     & (df['RSI'] < 50)
                      & (df['ema'] < df['ema_res3']) 
-                     & (df['volumHight'] == 1)
+                     #& (df['volumHight'] == 1)
                      , 1, 0)
 
 
@@ -161,11 +161,7 @@ def Update():
 
     df['zone_sell'] = df['sell'].diff()
 
-    if df['peaks_min'][len(df) - 1] == 1:
-            if countOpenTrades("S") > 0:
-                exit("S")
-
-    if df['zone_sell'][len(df) - 3] == 1 and df['rsi'][len(df) - 1] < 60  :
+    if df['zone_sell'][len(df) - 3] == 1:
         print("	  SELL SIGNAL!")
         if countOpenTrades("S") == 0:
             if countOpenTrades("B"):
@@ -182,9 +178,9 @@ def Update():
                      & (df['ema'] < df['ema_slow'])
                      & (df['ema_slow'] < df['ema_res1'])
                      & (df['ema_res1'] < df['ema_res2'])
-                     #& (df['ema_res2'] < df['ema_res3'])
+                     & (df['RSI'] > 50)
                      & (df['ema'] > df['ema_res3'])
-                     & (df['volumHight'] == 1)
+                     #& (df['volumHight'] == 1)
                      , 1, 0)
 
     #Close Strategy Operation Sell
@@ -198,10 +194,6 @@ def Update():
             operationActive = False
 
     df['zone_buy'] = df['buy'].diff()
-
-    if df['peaks_max'][len(df) - 1] == 1:
-            if countOpenTrades("B") > 0:
-                exit("B")
 
     if df['zone_buy'][len(df) - 3] == 1 and df['rsi'][len(df) - 1] > 40:
         print("	  BUY SIGNAL! ")
