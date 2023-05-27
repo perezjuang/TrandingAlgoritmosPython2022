@@ -2,13 +2,12 @@ import datetime as dt
 import os
 import time
 import fxcmpy
-from pyti.simple_moving_average import simple_moving_average as sma
 from pyti.relative_strength_index import relative_strength_index as rsi
-from numpy import mean
+import pyti.stochastic as sto
 import pandas as pd
 import numpy as np
 from scipy import signal
-
+import Probabilidades.RegrsionLineal2 as regresionlineal2
 token = 'c4a946e1a8a68558e71877bcf5b25014a3fe40d3'
 
 fileName = str(os.path.basename(__file__))
@@ -21,16 +20,22 @@ timeframe = "m1"
 
 file = symbol.replace("/", "_") + ".csv"
 
-amount = 1
-stop = -5
-limit = 15
 
 # Global Variables
+amount = 1
+stop = -8
+limit = 30
+
+#Volumen
+tickqtyLIMIT = 400
+
+
 pricedata = None
 pricedata_sup = None
-numberofcandles = 500
-tickqtyLIMIT = 250
+numberofcandles = 2000
 
+DOWNWARD_TREND = 'DOWNWARD-TREND'
+UPWARD_TREND = 'UPWARD-TREND'
 
 def GetConnection():
     return fxcmpy.fxcmpy(access_token=token, server="demo", log_level="error", log_file="zfxcm.log")
@@ -112,99 +117,148 @@ def getLatestPriceData():
 
 
 def Update():
+    print(str(dt.datetime.now()) + " " + timeframe + " Bar Closed " + symbol)
 
-    print(str(dt.datetime.now()) + " " + timeframe +
-          " Bar Closed - Running Update Function...")
-
-    d = {'bidclose': pricedata['bidclose'], 'tickqty': pricedata['tickqty']}
+    d = {'bidhigh': pricedata['bidhigh'],
+         'bidlow': pricedata['bidlow'],
+         'bidclose': pricedata['bidclose'],
+         'bidopen': pricedata['bidopen'], 
+         'tickqty': pricedata['tickqty']         
+         }
     df = pd.DataFrame(data=d)
+    df = df.assign(row_count=range(len(df)))
+    df.index = df['row_count'].values
 
     # HMA fast and slow calculation
-    df['ema'] = df['bidclose'].ewm(span=3).mean()
+    df['ema'] = df['bidclose'].ewm(span=5).mean()
     df['ema_slow'] = df['bidclose'].ewm(span=5).mean()
-    df['ema_res1'] = df['bidclose'].ewm(span=8).mean()
-    df['ema_res2'] = df['bidclose'].ewm(span=12).mean()
-    df['ema_res3'] = df['bidclose'].ewm(span=100).mean()
-    df['rsi'] = rsi(df['bidclose'],10)
+    df['ema_res1'] = df['bidclose'].ewm(span=5).mean()
+    df['ema_res2'] = df['bidclose'].ewm(span=5).mean()
+    df['ema_res3'] = df['bidclose'].ewm(span=5).mean()
 
+    df['rsi'] = rsi(df['bidclose'], 15)
+    df['sto_k'] = sto.percent_k(df['bidclose'], 10)
+    df['sto_d'] = sto.percent_d(df['bidclose'], 10)
+    df['sto_k'] = df['sto_k'].ewm(span=10).mean()
+    df['sto_d'] = df['sto_d'].ewm(span=10).mean()
     # Volumen trend
-    df['tickqtyLIMIT'] = 10
-    df['volumHight'] = np.where( (df['tickqty'] > df['tickqtyLIMIT'] ) , 1, 0)
+    #df['tickqtyLIMIT'] = tickqtyLIMIT
+    #df['volumHight'] = np.where((df['tickqty'] > df['tickqtyLIMIT']), 1, 0)
 
     df['value1'] = 1
 
     # Find local peaks
-    df['peaks_min'] = df.iloc[signal.argrelextrema(df['bidclose'].values, np.less, order=10)[0]]['value1']
-    df['peaks_max'] = df.iloc[signal.argrelextrema(df['bidclose'].values, np.greater, order=10)[0]]['value1']
-
-    df['sell'] = np.where( (df['peaks_max'] == 1)
-                     & (df['ema'] > df['ema_slow'])
-                     & (df['ema_slow'] > df['ema_res1'])
-                     & (df['ema_res1'] > df['ema_res2'])
-                     & (df['RSI'] < 50)
-                     & (df['ema'] < df['ema_res3']) 
-                     #& (df['volumHight'] == 1)
-                     , 1, 0)
+    df['peaks_min'] = df.iloc[signal.argrelextrema(df['bidclose'].values,np.less_equal, order=20)[0]]['value1']
+    df['peaks_max'] = df.iloc[signal.argrelextrema(df['bidclose'].values,np.greater_equal,order=20)[0]]['value1']
 
 
-    #Close Strategy Operation Sell
+
+    #Find Difference in PIPS AND VOLUMEN
+    for index, row in df.iterrows():        
+        if df.loc[index, 'peaks_max'] == 1:
+            iRV = index
+            while (iRV > 1):
+                iRV = iRV - 1
+                if df.loc[iRV, 'peaks_min'] == 1:
+                      df.loc[index, 'volumenPipsDiference'] =  ( abs ( df.loc[index, 'bidclose'] - df.loc[iRV, 'bidclose'] ) )
+                      iRV = 1
+
+    for index, row in df.iterrows():        
+        if df.loc[index, 'peaks_min'] == 1:
+            iRV = index
+            while (iRV > 1):
+                iRV = iRV - 1
+                if df.loc[iRV, 'peaks_max'] == 1:
+                      df.loc[index, 'volumenPipsDiference'] = ( abs ( df.loc[index, 'bidclose'] - df.loc[iRV, 'bidclose'] ) )
+                      iRV = 1
+
+
+    df['volumenPipsDiference'] = df['volumenPipsDiference'].fillna(method="ffill")
+    df['volumLimitOperation'] = 0.002
+    df['volumEnableOperation'] = np.where( (df['volumenPipsDiference'] >= df['volumLimitOperation']) , 1, 0)
+
+    #Find Price after pic if in correct position
+    df['priceInPositionSell'] = 0
+    for index, row in df.iterrows():
+        try:
+             if df.loc[index, 'peaks_max'] == 1  and df.loc[index + 5, 'bidclose'] < df.loc[index + 5, 'ema'] and df.loc[index, 'volumEnableOperation'] == 1:  
+                    df.loc[index, 'priceInPositionSell'] = 1
+             elif df.loc[index, 'peaks_min'] == 1  and df.loc[index + 5, 'bidclose'] > df.loc[index + 5, 'ema'] and df.loc[index, 'volumEnableOperation'] == 1: 
+                    df.loc[index, 'priceInPositionBuy'] = 1
+        except:
+            print("peaks: In Validation")
+
+
+
+  
+
+    df['sell'] = np.where( (df['priceInPositionSell'] == 1) , 1, 0)
+    
+    # Close Strategy Operation Sell
     operationActive = False
     for index, row in df.iterrows():
         if df.loc[index, 'sell'] == 1:
             operationActive = True
-
         if operationActive == True:
             df.loc[index, 'sell'] = 1
-
-        if df.loc[index, 'peaks_min']== 1 :
+        if df.loc[index, 'peaks_min'] == 1:
             operationActive = False
 
     df['zone_sell'] = df['sell'].diff()
 
-    if df['zone_sell'][len(df) - 3] == 1:
+    if df['zone_sell'][len(df) - 6] == -1:
+            if countOpenTrades("S") > 0:
+                exit("S")
+
+
+    if df['zone_sell'][len(df) - 6] == 1:
         print("	  SELL SIGNAL!")
         if countOpenTrades("S") == 0:
             if countOpenTrades("B"):
                 exit("B")
             print("	  Opening Sell Trade...")
             enter("S")
-            
-
 
     # ***********************************************************
     # * Estrategy  BUY
     # ***********************************************************
-    df['buy'] = np.where( (df['peaks_min'] == 1)
-                     & (df['ema'] < df['ema_slow'])
-                     & (df['ema_slow'] < df['ema_res1'])
-                     & (df['ema_res1'] < df['ema_res2'])
-                     & (df['RSI'] > 50)
-                     & (df['ema'] > df['ema_res3'])
-                     #& (df['volumHight'] == 1)
-                     , 1, 0)
+    df['buy'] = np.where( (df['priceInPositionBuy'] == 1)
 
-    #Close Strategy Operation Sell
+                         , 1, 0)
+
+
+    # Close Strategy Operation Sell
     operationActive = False
     for index, row in df.iterrows():
         if df.loc[index, 'buy'] == 1:
             operationActive = True
         if operationActive == True:
             df.loc[index, 'buy'] = 1
-        if df.loc[index, 'peaks_max'] == 1 :
+        if df.loc[index, 'peaks_max'] == 1:
             operationActive = False
+
+
 
     df['zone_buy'] = df['buy'].diff()
 
-    if df['zone_buy'][len(df) - 3] == 1 and df['rsi'][len(df) - 1] > 40:
+
+
+    if df['zone_buy'][len(df) - 6] == -1:
+        if countOpenTrades("B") > 0:
+            exit("B")
+
+    if df['zone_buy'][len(df) - 6] == 1:
         print("	  BUY SIGNAL! ")
         if countOpenTrades("B") == 0:
             if countOpenTrades("S") > 0:
                 exit("S")
             print("	  Opening Buy Trade...")
             enter("B")
-    
+
     df.to_csv(file)
-    print(str(dt.datetime.now()) + " " + timeframe + " Update Function Completed.\n")
+    print(str(dt.datetime.now()) + " " + timeframe +
+          " Update Function Completed. " + symbol + "\n")
+
 
 def enter(BuySell):
     direction = True
