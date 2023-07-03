@@ -1,41 +1,32 @@
-import os
-from traceback import print_list
-from webbrowser import get
-
-import pandas as pd
-import matplotlib.pyplot as plt
-
-import numpy as np
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-import matplotlib.animation as animation
 import configparser
-
-config = configparser.ConfigParser()
-config.read('RobotV5.ini')
-
-# This function runs once at the beginning of the strategy to create price/indicator streams
-time_frame_operations = config['timeframe']
-timeframe = time_frame_operations['timeframe']
-
-#symbol = time_frame_operations['symbol']
-fileName = str(os.path.basename(__file__))
-fileName = fileName.replace(".py", "")
-fileName = fileName.replace("Plotter_", "")
-symbol = fileName  # .replace("_", "/")
-
-min = 0
-amount_value = 1
-vallimit = 8
-valstop = -15
+import os
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib.lines import Line2D
 
 plt.style.use('dark_background')
 
-def readData():
-    return pd.read_csv(symbol + '.csv')
+config = configparser.ConfigParser()
+symbol = None
+time_frame_operations = None
+timeframe = None
+def configRead():
+    global config
+    global symbol
+    global time_frame_operations
+    global timeframe
+    config.read('RobotV5.ini')
+    time_frame_operations = config['timeframe']
+    timeframe = time_frame_operations['timeframe']
+    symbol = time_frame_operations['symbol']
+    
+configRead()
 
+def readData():
+    configRead()
+    return pd.read_csv(symbol + '.csv')
 
 class SubplotAnimation(animation.TimedAnimation):
     def __init__(self):
@@ -81,12 +72,12 @@ class SubplotAnimation(animation.TimedAnimation):
         self.VOLUM.set_xlabel('VOLUM')
         self.VOLUM.set_ylabel('Volumen')
         self.VOLUMLineVolum = Line2D([], [], color='blue')
-        #self.VOLUMLinePromedio = Line2D([], [], color='orange')
+        self.VOLUMLinePromedio = Line2D([], [], color='orange')
         #self.VOLUMFast = Line2D([], [], color='green')
         #self.VOLUMLimit = Line2D([], [], color='red')
 
         self.VOLUM.add_line(self.VOLUMLineVolum)
-        # self.VOLUM.add_line(self.VOLUMLinePromedio)
+        self.VOLUM.add_line(self.VOLUMLinePromedio)
         # self.VOLUM.add_line(self.VOLUMFast)
         # self.VOLUM.add_line(self.VOLUMLimit)
 
@@ -163,7 +154,7 @@ class SubplotAnimation(animation.TimedAnimation):
         self.lineRSI.set_data(x, pricedata['rsi'])
 
         self.VOLUMLineVolum.set_data(x, pricedata['volumenPipsDiference'])
-        #self.VOLUMLinePromedio.set_data(x, pricedata['tickqtySMA'])
+        self.VOLUMLinePromedio.set_data(x, pricedata['volumLimitOperation'])
         #self.VOLUMFast.set_data(x, pricedata['tickqtySMAFast'])
         #self.VOLUMLimit.set_data(x, pricedata['tickqtyLIMIT'])
 
@@ -193,7 +184,7 @@ class SubplotAnimation(animation.TimedAnimation):
 
         self._drawn_artists = [self.linePrice, self.lineSMA200, self.lineSMA400, self.ema_res1, self.ema_res2, self.ema_res3, self.sellOpen, self.sellClose, self.buyOpen, self.buyClose,self.peaks_min,self.peaks_max,
                                self.lineRSI_INF, self.lineRSI_SUP, self.lineRSI,self.lineRSI_MED,
-                               self.VOLUMLineVolum, #self.VOLUMLinePromedio,self.VOLUMFast,self.VOLUMLimit,
+                               self.VOLUMLineVolum, self.VOLUMLinePromedio,#self.VOLUMFast,self.VOLUMLimit,
                                self.STO_K, self.STO_D, self.sto_LimitSup,self.sto_LImitInf,
                                ]
 
